@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="/nearmypostcode.js"></script>
+    </head>
+    <body>
+        <h1>Find your nearest AA Call Box</h1>
+        <p>Type a postcode to get a list of AA Call boxes sorted by distance to the given postcode.</p>
+        <button id="btn_enable">Enable search tool (5.5MB download)</button>
+        <p id="status">(Search tool is not yet loaded)</p>
+        <input type="text" id="postcode" placeholder="postcode" disabled autocomplete="off"/>
+        <button id="btn_search" disabled>Search</button>
+        <p id="result"></p>
+        <ul id="result_list"></ul>
+        <script>
+            const aa_boxes = [
+                { name:"Avoncroft Museum (Box 44)", coords:[52.313946, -2.070550], },
+                { name:"Amberly Museum (Box 45)", coords:[50.898736, -0.538421], },
+                { name:"Cotswold Motoring Museum (Box 59)", coords:[51.884775, -1.759191], },
+                { name:"Box 73", coords:[50.762066, 0.286919], },
+                { name:"AA HQ Basingstoke (Box 121)", coords:[51.269182, -1.071438], },
+                { name:"Box 137", coords:[51.203571, -3.660266], },
+                { name:"Box 161", coords:[51.871919, -3.167029], },
+                { name:"Avoncroft Museum (Box 162)", coords:[52.313946, -2.070550], },
+                //{ name:"Box 175", coords:[], }, // Crosshall. Supposedly now at Glasgow's "Museum of Transport" not entirely sure where that is.
+                //{ name:"Box 189", coords:[], }, // Supposedly at Bosley Cross Roads. (A523 meets A54). No evidence on google sreetview
+                { name:"Gloucestershire Warwickshire Steam Railway (Box 242)", coords:[51.966379, -1.963989], }, 
+                { name:"Box 289", coords:[52.376799, -3.850705], },
+                { name:"Box 321", coords:[52.222764, -2.851368], },
+                { name:"Wythall Transport Museum (Box 342)", coords:[52.373493, -1.896139], },
+                { name:"Box 372", coords:[53.331957, -2.411193], },
+                { name:"Coventry Transport Museum (Box 374)", coords:[52.411094, -1.509461], },
+                { name:"Box 442", coords:[54.295547, -1.960255], },
+                { name:"Box 456", coords:[50.705495, -3.349075], },
+                { name:"Box 472", coords:[57.065791, -2.948043], },
+                { name:"Box 487", coords:[54.490653, -3.036008], },
+                { name:"Box 504", coords:[57.853934, -4.304919], },
+                { name:"Box 530", coords:[52.965418, 0.662270], },
+                //{ name:"Box 535", coords:[], }, // Carterway Heads, supposedly now in Beamish museum, which is huge, and I can't verify if it's there, so no coordinates for this one
+                { name:"Lakeland Motor Museum (Box 553)", coords:[54.258795, -2.989247], },
+                { name:"Box 573", coords:[53.999658, -0.802168], },
+                { name:"Box 580", coords:[52.911565, -4.493585], },
+                { name:"Box 631", coords:[57.363656, -4.393414], },
+                //{ name:"Box 645", coords:[], }, // Supposedly in Ulster "Folk and Transport museum", which appears to be at least two separate museums?? which one is it? coordinates unclear
+                //{ name:"Box 687", coords:[], }, // Somewhere in Jersey? Unclear where, the only source lists a bunch of places, no clear location
+                { name:"Box 714", coords:[57.634232, -3.190198], },
+                { name:"Box 723", coords:[55.495759, -3.203923], },
+                { name:"Grampian Transport Museum (Box 739)", coords:[57.233368, -2.701558], },
+                { name:"Box 746", coords:[57.428701, -3.659568], },
+                //{ name:"Box 751", coords:[], }, // Supposedly in the same museum as box 175
+                { name:"Box 753", coords:[56.991432, -2.577018], },
+                { name:"Box 817", coords:[55.558502, -1.637403], },
+            ];
+
+            function get_ll(x){
+                return [x.coords[1], x.coords[0]];
+            }
+
+            const status = document.getElementById("status");
+            const result = document.getElementById("result");
+            const enablebtn = document.getElementById("btn_enable");
+            const searchbox = document.getElementById("postcode");
+            const searchbtn = document.getElementById("btn_search");
+            searchbox.disabled = true; // workaround browsers being too helpful
+            searchbtn.disabled = true;
+            async function init(){
+                status.innerText = "Loading search data for offline use...";
+                try{
+                    const nmp = await NearMyPostcode("/postcodes.pack");
+                    searchbtn.onclick = ()=>{
+                        try{
+                            const [cpostcode, [long,lat]] = nmp.lookup_postcode(postcode.value);
+                            result.innerText = `${cpostcode}: ${lat.toFixed(5)}, ${long.toFixed(5)}`;
+
+                            const sorted = nmp.sort_by_distance(aa_boxes, [long,lat], get_ll);
+                            const ul = document.getElementById("result_list");
+                            ul.innerHTML = "";
+                            for (const box of sorted){
+                                const li = document.createElement("li");
+                                li.innerText = `${Math.round(box.distance)}km: ${box.item.name} (${box.item.coords})`
+                                ul.appendChild(li);
+                                console.log(box);
+                            }
+                        }
+                        catch (e) {
+                            console.error(e);
+                            result.innerText = `Error: ${e.message}`;
+                        }
+                    };
+                    searchbox.onkeypress = (ev)=>{
+                        if (ev.key == "Enter"){
+                            searchbtn.onclick();
+                        }
+                    }
+                    searchbox.disabled = false;
+                    searchbtn.disabled = false;
+                    status.innerText = "Ready!";
+                    enablebtn.disabled = true;
+                }
+                catch (e){
+                    console.error(e);
+                    status.innerText = `Unable to prepare for offline use: ${e.message}`;
+                }
+            }
+            enablebtn.onclick = init;
+        </script>
+    </body>
+</html>

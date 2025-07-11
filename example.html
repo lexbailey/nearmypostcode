@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="nearmypostcode.js"></script>
+    </head>
+    <body>
+        <h1>Privacy preserving postcode search tool</h1>
+        <p>Look up the approximate GPS coordinates for a UK postcode area.</p>
+        <p>This tool works offline and never sends your query to any web server. To do this, it must download a file containing all the UK postcodes. It's only about 5.5MB. Enable the search tool while connected to the internet, and it will download the file ready for offline use. If you want to you can then disconnect from the internet entirely! You're ready to look up as many postcodes as you like, your searches never leave your computer!</p>
+        <p>Auto-complete is also disabled for the postcode search box, to maintain privacy.</p>
+
+        <p id="status">(Search tool is not yet loaded) <button id="btn_enable">Enable search tool (5.5MB download)</button> </p>
+        <div id="search_tool" style="display:none;">
+            <input type="text" id="postcode" placeholder="postcode" autocomplete="off"/>
+            <button id="btn_search" >Search</button>
+        </div>
+        <p id="result"></p>
+        <script>
+            const status = document.getElementById("status");
+            const result = document.getElementById("result");
+            const enablebtn = document.getElementById("btn_enable");
+            const searchbox = document.getElementById("postcode");
+            const searchbtn = document.getElementById("btn_search");
+            const searchtool = document.getElementById("search_tool");
+            async function init(){
+                status.innerText = "Loading search data for offline use...";
+                try{
+                    const nmp = await NearMyPostcode("/postcodes.deltapack");
+                    searchbtn.onclick = ()=>{
+                        try{
+                            const [cpostcode, [long,lat]] = nmp.lookup_postcode(postcode.value);
+                            result.innerText = `${cpostcode}: ${lat.toFixed(5)}, ${long.toFixed(5)}`;
+                        }
+                        catch (e) {
+                            console.error(e);
+                            result.innerText = `Error: ${e.message}`;
+                        }
+                    };
+                    searchbox.onkeypress = (ev)=>{
+                        if (ev.key == "Enter"){
+                            searchbtn.onclick();
+                        }
+                    }
+                    searchbox.disabled = false;
+                    searchbtn.disabled = false;
+                    status.innerText = "Ready!";
+                    enablebtn.style.display = "none";
+                    searchtool.style.display = "block";
+                }
+                catch (e){
+                    console.error(e);
+                    status.innerText = `Unable to prepare for offline use: ${e.message}`;
+                }
+            }
+            enablebtn.onclick = init;
+        </script>
+    </body>
+</html>
