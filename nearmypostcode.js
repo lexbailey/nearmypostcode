@@ -33,7 +33,7 @@ async function NearMyPostcode(datafile_url){
     const unixtime = BigInt(timestamp[0]) + (BigInt(timestamp[1]) * (2n**32n));
     const date = new Date(Number(unixtime*1000n));
 
-    console.info(`nearmypostcode: Loaded postcode pack. File format version is ${version}. Last updated ${date.toDateString()}`);
+    console.info(`nearmypostcode: Loaded postcode pack. Max supported file format version is ${max_version}. File format version is ${version}. Last updated ${date.toDateString()}`);
 
     var nmp = Object();
     nmp.deltapack = deltapack.slice(16); // Discard the header, no longer needed
@@ -210,7 +210,7 @@ async function NearMyPostcode(datafile_url){
             if (pc_is_delta){
                 // Postcode delta encoding is part of the format byte
                 const delta = format & 0x3f;
-                this_code = last_code + delta;
+                this_code = last_code + delta + 1;
             }
             else{
                 // Absolute postcode is three bytes long
