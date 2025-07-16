@@ -87,7 +87,7 @@ Haversine distance between points `a` and `b` in kilometres.
 
 ## format_postcode()
 
-Fucntion `format_postcode(postcode)`
+Function `format_postcode(postcode)`
 
 Return type `string`
 
