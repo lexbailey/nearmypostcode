@@ -72,7 +72,7 @@ The function `NearMyPostcode` takes the URL for the postcodes.pack file, and ret
 ## NearMyPostcode object
 
 
-### distance_between()
+### nmp.distance_between()
 
 Function `distance_between(a,b)`
 
@@ -85,7 +85,7 @@ Args:
 
 Haversine distance between points `a` and `b` in kilometres.
 
-## format_postcode()
+## nmp.format_postcode()
 
 Function `format_postcode(postcode)`
 
@@ -97,7 +97,7 @@ Args:
 
 Formats a postcode in to the canonical 7 character string format. The input postcode can use any case for letters, and may have spaces at any point. The resulting postcode will be all upper case. The Inward code (last three chars) will be aligned to the right of the string. The Outward code (everything exceptht Inward code) will be aligned to the left of the string. Padding spaces will be added between the Outward and Inward codes if required to make the postcode exactly 7 characters long.
 
-### lookup_postcode()
+### nmp.lookup_postcode()
 
 Function `lookup_postcode(postcode)`
 
@@ -110,7 +110,7 @@ Args:
 
 This function takes a postcode (that may or may not be in canonical format) and searches for it in the postcode data file provided when this NearMyPostcode object was created. It returns the canonical form of the postcode, and the latitude and longitude, or throws an error.
 
-### sort_by_distance()
+### nmp.sort_by_distance()
 
 Function `sort_by_distance(items, point, coordsfunc)`
 
@@ -135,7 +135,7 @@ The result is a sorted list of wrappers around the items in the input list. Each
 
 where distance is the distance to the item from `point` in kilometres.
 
-### date_last_updated
+### nmp.date_last_updated
 
 This field contains the date of introduction of the most recently introduced postcode at the time when the data file was created.
 
