@@ -126,7 +126,7 @@ This function sorts a list of items by their distance to point. Coordsfunc must 
 
 The result is a sorted list of wrappers around the items in the input list. Each one has this form:
 
-```json
+```js
 {
     item: {... the input item ...},
     distance: 123
