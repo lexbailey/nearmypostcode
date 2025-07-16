@@ -10,8 +10,35 @@ async function NearMyPostcode(datafile_url){
     catch (err) {
         throw new Error(`Failed to fetch postcode data file (${datafile_url}): ${err.message}`);
     }
+
+    // Parse the file header
+    // Header, 16 bytes
+    //
+    //     magic:   4 bytes "UKPP" - magic number for "UK Postcode Pack"
+    //     version: 4 bytes (u32)  - version number of the file format (this code generates version 1)
+    //     date:    8 bytes (u64)  - a unix epoch that represents the release date of the ONS dataset that the file was generated from
+
+       
+    const magic = new Uint32Array(deltapack.slice(0,4))[0];
+    if (magic != 1347439445){
+        throw new Error("Postcode data file is not using a known format");
+    }
+    const version = new Uint32Array(deltapack.slice(4,8))[0];
+    const max_version = 1; // This version of the library only supports version 1
+    if (version > max_version){
+        throw new Error(`Postcode data file uses format version ${version}. This NMP version only supports data formats up to ${max_version}. NMP needs to be updated.`);
+    }
+
+    const timestamp = new Uint32Array(deltapack.slice(8,16));
+    const unixtime = BigInt(timestamp[0]) + (BigInt(timestamp[1]) * (2n**32n));
+    const date = new Date(Number(unixtime*1000n));
+
+    console.info(`nearmypostcode: Loaded postcode pack. File format version is ${version}. Last updated ${date.toDateString()}`);
+
     var nmp = Object();
-    nmp.deltapack = deltapack;
+    nmp.deltapack = deltapack.slice(16); // Discard the header, no longer needed
+
+    nmp.date_last_updated = date;
 
     nmp.E_FORMAT = "Postcode format not recognised";
     nmp.E_NOTFOUND = "Postcode not found";
@@ -113,8 +140,11 @@ async function NearMyPostcode(datafile_url){
         // File structure:
         // (all numbers in little endian unless specified otherwise)
         // 
-        // Header, (4*8) = 32 bytes:
-        // 
+        // Header, 16 bytes (skipped by loader)
+        //     (skipped)
+        //
+        // Bounding box extents, 4*8=32 bytes
+        //
         //     minlong: 8 bytes (f64)
         //     maxlong: 8 bytes (f64)
         //     minlat:  8 bytes (f64)

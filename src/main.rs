@@ -7,13 +7,14 @@ in to a packed binary format that is much more compact and quick to search. The 
 be read using the javascript library provided.
 
 */
-use time::Date;
+use time::{Date, UtcDateTime, Time};
 use std::fs::OpenOptions;
 use std::io::{Write,Seek};
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::num::ParseFloatError;
 use std::collections::HashMap;
+use clap::{arg, command};
 
 #[derive(Debug)]
 pub enum PostcodeError{
@@ -130,7 +131,7 @@ fn parse_date(d: Option<&str>) -> Option<Date> {
     }
 }
 
-fn read_postcodes(path: &str) -> Result<(Vec<PostcodeInfo>,Point,Point,usize,usize), PostcodeError> {
+fn read_postcodes(path: &str, exclude: &Vec<&str>) -> Result<(Vec<PostcodeInfo>,Point,Point,usize,usize,usize,u64), PostcodeError> {
     let file = OpenOptions::new().read(true).open(path)?;
     let mut pclist = Vec::new();
     let mut postcodes = csv::Reader::from_reader(file);
@@ -152,8 +153,11 @@ fn read_postcodes(path: &str) -> Result<(Vec<PostcodeInfo>,Point,Point,usize,usi
 
     let mut total = 0;
     let mut num_terminated = 0;
+    let mut num_excluded = 0;
 
-    for line in postcodes.records() {
+    let mut last_update = Date::from_ordinal_date(1970,1).unwrap();
+
+    'pcloop: for line in postcodes.records() {
         if line.is_err(){
             return Err(PostcodeError::InputMalformed());
         }
@@ -189,23 +193,38 @@ fn read_postcodes(path: &str) -> Result<(Vec<PostcodeInfo>,Point,Point,usize,usi
         let long: f64 = long.unwrap().parse().unwrap();
         let location = Point{x:long, y:lat};
 
+        for prefix in exclude{
+            if postcode.starts_with(prefix){
+                num_excluded += 1;
+                continue 'pcloop;
+            }
+        }
+
+        let introduced = introduced.unwrap();
+        if introduced > last_update{
+            last_update = introduced;
+        }
+
         minlat = minlat.min(lat);
         maxlat = maxlat.max(lat);
         minlong = minlong.min(long);
         maxlong = maxlong.max(long);
-
+        
         pclist.push(PostcodeInfo{
             postcode,
             location,
         });
     }
     let skipped = total - pclist.len();
+    let unixtime = UtcDateTime::new(last_update, Time::from_hms(0,0,0).unwrap()).unix_timestamp() as u64;
     Ok((
         pclist, // Postcodes
         Point{x:minlong, y:minlat}, // Lower left corner of bounding box
         Point{x:maxlong, y:maxlat}, // Upper right corner of bounding box
         skipped, // Number of postcodes skipped
         num_terminated, // number of postcodes terminated
+        num_excluded, // number of postcodes terminated
+        unixtime, // date of last update
     ))
 }
 
@@ -351,10 +370,13 @@ fn human(n: u64) -> String{
     format!("{:.3} {}",n, names[ni])
 }
 
-fn do_postcode_repack(infilename: &str, outfilename: &str) -> Result<(),PostcodeError>{
+fn do_postcode_repack(infilename: &str, outfilename: &str, exclude: &Vec<&str>) -> Result<(),PostcodeError>{
     println!("Reading postcodes...");
-    let (mut postcodes, minll, maxll, skipped, terminated) = read_postcodes(infilename)?;
-    println!("  File contained {} entries. {} of these were skipped. {} of the skips were for terminated postcodes.", postcodes.len()+skipped, skipped, terminated);
+    let (mut postcodes, minll, maxll, skipped, terminated, excluded, last_update) = read_postcodes(infilename, exclude)?;
+    println!("  File contained {} entries.", postcodes.len()+skipped);
+    println!("    {} of these were skipped.", skipped);
+    println!("      {} of the skips were for terminated postcodes.", terminated);
+    println!("      {} of the skips were for excluded prefixes.", excluded);
     println!("  Will process {} postcodes in the bounding box from {},{} to {},{}", postcodes.len(), minll.x,minll.y, maxll.x,maxll.y);
     println!("Sorting postcode lists...");
     postcodes.sort_by(|a,b|a.postcode.cmp(&b.postcode));
@@ -367,7 +389,13 @@ fn do_postcode_repack(infilename: &str, outfilename: &str) -> Result<(),Postcode
     File structure:
     (all numbers in little endian unless specified otherwise)
     
-    Header, (4*8) = 32 bytes:
+    Header, 16 bytes:
+
+        magic:   4 bytes "UKPP" - magic number for "UK Postcode Pack"
+        version: 4 bytes (u32)  - version number of the file format (this code generates version 1)
+        date:    8 bytes (u64)  - a unix epoch that represents the release date of the ONS dataset that the file was generated from
+
+    Boudning box extents, 4*8 = 32 bytes:
 
         minlong: 8 bytes (f64)
         maxlong: 8 bytes (f64)
@@ -380,13 +408,29 @@ fn do_postcode_repack(infilename: &str, outfilename: &str) -> Result<(),Postcode
             position: 4 bytes (u32, byte offset into postcode data list)
         last_pos: 4 bytes (u32, conveniently is just above last entry in the table)
         
-    Postcode data, variable length (7 bytes per postcode):
-
+    Postcode data, variable length (3 to 8 bytes per postcode):
+    
         list of postcodes:
-            postcode: 3 bytes (custom encoding)
-            longlat:  4 bytes (2 x u16)
+            format:   1 bytes (bitfield)
+                postcode_is_delta: 1 bit (flag indicating if postcode is delta-encoded)
+                latlong_is_delta:  1 bit (flag indicating if lat/long is delta-encoded)
+                postcode_delta:    6 bits (u6 number to add to previous postcode to calculate this postcode, or unused if not postcode_is_delta)
+            postcode: 0 or 3 bytes (custom encoding, present only if not postcode_is_delta)
+            longlat:  2 or 4 bytes (2 x i8 if latlong_is_delta, or 2 x u16 otherwise)
 
     */
+
+    // Header...
+    outfile.write(b"UKPP")?; // magic number is 1347439445
+
+    // version 1 of file format
+    const version: u32 = 1;
+    outfile.write(&version.to_le_bytes())?;
+
+    // data update date
+    outfile.write(&last_update.to_le_bytes())?;
+
+    // bounding box extents
     let minlong = minll.x;
     let maxlong = maxll.x;
     let minlat = minll.y;
@@ -452,16 +496,21 @@ fn do_postcode_repack(infilename: &str, outfilename: &str) -> Result<(),Postcode
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let matches = command!()
+        .arg(arg!(<input> "Input file name (path to ONS Postcode Database CSV file)"))
+        .arg(arg!(<output> "Output file name"))
+        .arg(arg!(--exclude <prefix> ... "Exclude a group of postcodes by its prefix (can be specified multiple times)"))
+        .get_matches();
 
-    if args.len() < 3{
-        eprintln!("usage: {} <input file> <output file>", args[0]);
-        return
-    }
-    let infilename = &args[1];
-    let outfilename = &args[2];
+    let infilename = &matches.get_one::<String>("input").expect("No input file");
+    let outfilename = &matches.get_one::<String>("output").expect("No output file");
+    let exclude = if let Some(e) = matches.get_many::<String>("exclude"){
+        e.map(|a|a.as_str()).collect()
+    } else {
+        Vec::new()
+    };
 
-    match do_postcode_repack(infilename, outfilename){
+    match do_postcode_repack(infilename, outfilename, &exclude){
         Err(e) => { eprintln!("Error repacking postcodes: {e}"); }
         Ok(_) => { println!("Complete"); }
     }
