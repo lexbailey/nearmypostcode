@@ -7,6 +7,7 @@ in to a packed binary format that is much more compact and quick to search. The 
 be read using the javascript library provided.
 
 */
+use std::process::ExitCode;
 use time::{Date, UtcDateTime, Time};
 use std::fs::OpenOptions;
 use std::io::{Write,Seek};
@@ -495,7 +496,7 @@ fn do_postcode_repack(infilename: &str, outfilename: &str, exclude: &Vec<&str>) 
     Ok(())
 }
 
-fn main() {
+fn main() -> ExitCode {
     let matches = command!()
         .arg(arg!(<input> "Input file name (path to ONS Postcode Database CSV file)"))
         .arg(arg!(<output> "Output file name"))
@@ -511,8 +512,8 @@ fn main() {
     };
 
     match do_postcode_repack(infilename, outfilename, &exclude){
-        Err(e) => { eprintln!("Error repacking postcodes: {e}"); }
-        Ok(_) => { println!("Complete"); }
+        Err(e) => { eprintln!("Error repacking postcodes: {e}"); ExitCode::FAILURE }
+        Ok(_) => { println!("Complete"); ExitCode::SUCCESS }
     }
 }
 

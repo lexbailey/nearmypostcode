@@ -1,0 +1,18 @@
+name: Do release
+on:
+    push:
+        tags:
+            - 'v*'
+jobs:
+    Build-Release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+            - run: build_release https://www.arcgis.com/sharing/rest/content/items/3be72478d8454b59bb86ba97b4ee325b/data
+            - uses: "marvinpinto/action-automatic-releases@latest"
+              with:
+                repo_token: "${{ secrets.GITHUB_TOKEN }}"
+                prerelease: false
+                files: nearmypostcode.zip
+            
