@@ -13,5 +13,5 @@ datafile=$(find . -maxdepth 1 -name '*.csv')
 popd
 popd
 cargo run -- fetched_data/Data/$datafile postcodes.pack
-minify nearmypostcode.js > nearmypostcode.min.js
-zip nearmypostcode.zip postcodes.pack nearmypostcode.js nearmypostcode.min.js
+terser nearmypostcode.js -o nearmypostcode.min.js --source-map
+zip nearmypostcode.zip postcodes.pack nearmypostcode.js nearmypostcode.min.js nearmypostcode.min.js.map

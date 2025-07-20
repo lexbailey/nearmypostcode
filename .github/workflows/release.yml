@@ -9,7 +9,7 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v2
-            - run: npm i babel-minify -g
+            - run: npm i terser -g
             - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/3be72478d8454b59bb86ba97b4ee325b/data
             - uses: "marvinpinto/action-automatic-releases@latest"
               with:
