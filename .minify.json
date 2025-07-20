@@ -1,9 +1,0 @@
-{
-    "js": {
-        "type": "putout",
-        "putout": {
-            "mangle": false,
-            "mangleClassNames": false
-        }
-    }
-}
