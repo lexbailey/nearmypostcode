@@ -1,0 +1,13 @@
+name: Demo pages
+on: push
+jobs:
+    Build-Demosite:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+            - run: npm i terser -g
+            - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/3be72478d8454b59bb86ba97b4ee325b/data
+            - name: Configure GitHub Pages
+              uses: actions/configure-pages@v5
+ 
