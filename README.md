@@ -2,6 +2,8 @@
 
 A privacy-focussed Javascript library for converting UK postcodes to lat/long GPS coordinates and sorting locations by distance.
 
+Explainer video: https://youtu.be/5HRAUWrvK6o
+
 # Principles
 
 NearMyPostcode (NMP) lets you provide a "store locator" feature (or similar) on your website that respects your user's privacy.
