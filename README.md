@@ -55,9 +55,9 @@ For details of where to get the ONS database, see this page: https://geoportal.s
 
 # Examples
 
-For a more complete example of initialisation, see `example.html` - live demo here
+For a more complete example of initialisation, see `index.html` - live demo [here](https://lexbailey.github.io/nearmypostcode/index.html)
 
-For an example of using NMP to sort landmarks by distance, see `aa_box_demo.html` - live demo here
+For an example of using NMP to sort landmarks by distance, see `aa_box_demo.html` - live demo [here](https://lexbailey.github.io/nearmypostcode/aa_box_demo.html)
 
 # Documentation
 
