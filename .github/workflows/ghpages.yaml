@@ -8,6 +8,13 @@ jobs:
               uses: actions/checkout@v2
             - run: npm i terser -g
             - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/3be72478d8454b59bb86ba97b4ee325b/data
-            - name: Configure GitHub Pages
+            - name: Setup Pages
               uses: actions/configure-pages@v5
+            - name: Upload artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                path: '.'
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
  
