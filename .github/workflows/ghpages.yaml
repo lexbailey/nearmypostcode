@@ -1,5 +1,9 @@
 name: Demo pages
 on: push
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 jobs:
     Build-Demosite:
         runs-on: ubuntu-latest
@@ -8,12 +12,17 @@ jobs:
               uses: actions/checkout@v2
             - run: npm i terser -g
             - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/3be72478d8454b59bb86ba97b4ee325b/data
+            - run: mkdir ghpageroot
+            - run: cp index.html ghpageroot/index.html
+            - run: cp aa_box_demo.html ghpageroot/aa_box_demo.html
+            - run: cp nearmypostcode.js ghpageroot/nearmypostcode.js
+            - run: cp postcodes.pack ghpageroot/postcodes.pack
             - name: Setup Pages
               uses: actions/configure-pages@v5
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
               with:
-                path: '.'
+                path: ghpageroot
             - name: Deploy to GitHub Pages
               id: deployment
               uses: actions/deploy-pages@v4
