@@ -25,7 +25,7 @@
             async function init(){
                 status.innerText = "Loading search data for offline use...";
                 try{
-                    const nmp = await NearMyPostcode("/postcodes.pack");
+                    const nmp = await NearMyPostcode("postcodes.pack");
                     searchbtn.onclick = ()=>{
                         try{
                             const [cpostcode, [long,lat]] = nmp.lookup_postcode(postcode.value);
