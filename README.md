@@ -8,7 +8,7 @@ NearMyPostcode (NMP) lets you provide a "store locator" feature (or similar) on 
 
 NMP works entirely offline. Once the data file (approx 5.5MB) is downloaded to the user's browser, they can completely disconnect from the internet and sill be able to look up their postcode and find things near their postcode.
 
-When using NMP, you are encouraged to serve the javascript file from your own web server, and also serve the postcode data file from your own server. This minimises the number of requests the user agent needs to make to other services, and thus benfits the user's privacy further.
+When using NMP, you are encouraged to serve the javascript file from your own web server, and also serve the postcode data file from your own server. This minimises the number of requests the user agent needs to make to other services, and thus benefits the user's privacy further.
 
 Although it is possible, you are discouraged from using this library to host your own postcode lookup API. The code is designed to be plain browser-friendly javascript because it is supposed to be used in the browser for privacy reasons.
 
