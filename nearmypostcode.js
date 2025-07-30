@@ -88,7 +88,7 @@ async function NearMyPostcode(datafile_url){
             return encode_AZ09(x);
         }
 
-        const [a,b,c,d,e,f,g] = postcode;
+        const [,,c,d,e,f,g] = postcode;
 
         // Encode the rest
         let c2 = 26*26*10*37*encode_AZ09_space(c);
@@ -112,7 +112,7 @@ async function NearMyPostcode(datafile_url){
         // in to the string to make up the length.
         const VALID_CHARS = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         let chars = Array.from(pc);
-        for (c of chars){
+        for (let c of chars){
             if (!VALID_CHARS.includes(c)){
                 throw new Error(nmp.E_FORMAT);
             }
@@ -247,7 +247,7 @@ async function NearMyPostcode(datafile_url){
     });
 
     nmp.distance_between = ((point_a,point_b)=>{
-        toRad = (x)=> x * Math.PI / 180;
+        const toRad = (x)=> x * Math.PI / 180;
 
         const [lon1,lat1] = point_a;
         const [lon2,lat2] = point_b;
