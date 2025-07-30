@@ -110,15 +110,11 @@ async function NearMyPostcode(datafile_url){
         // the inward code always right-aligned and the outward code is always left aligned.
         // This means that if the outward code is shorter than 4 characters, then there will be spaces inserted
         // in to the string to make up the length.
-        const VALID_CHARS = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        let chars = Array.from(pc);
-        for (c of chars){
-            if (!VALID_CHARS.includes(c)){
-                throw new Error(nmp.E_FORMAT);
-            }
+        if (!/^[0-9A-Za-z ]+$/.test(pc)){
+            throw new Error(nmp.E_FORMAT);
         }
-    
-        let code = chars.filter((c)=>c!=" ").map((c)=>c.toUpperCase()).join("");
+
+        let code = Array.from(pc).filter((c)=>c!=" ").map((c)=>c.toUpperCase()).join("");
     
         // We should now have somewhere between 7 and 5 characters
         let numchars = code.length;
@@ -129,10 +125,9 @@ async function NearMyPostcode(datafile_url){
         let inward = code.slice(numchars-3,numchars);
         let outward = code.slice(0,numchars-3);
         // Generate enough padding
-        let n_padding = 4 - outward.length;
-        let padding = "  ".slice(0,n_padding);
+        let paddedOutward = outward.padEnd(4);
         // Build the resulting postcode
-        let canonical = outward + padding + inward;
+        let canonical = paddedOutward + inward;
         return canonical;
     })
 
