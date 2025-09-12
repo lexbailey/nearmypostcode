@@ -141,7 +141,7 @@ fn read_postcodes(path: &str, exclude: &Vec<&str>) -> Result<(Vec<PostcodeInfo>,
         return Err(PostcodeError::InputMalformed());
     }
     let headers: Vec<&str> = headers.unwrap().iter().collect();
-    let id_postcode = field_id("pcd", &headers)?;
+    let id_postcode = field_id("pcd", &headers).or(field_id("pcd7", &headers))?;
     let id_lat = field_id("lat", &headers)?;
     let id_long = field_id("long", &headers)?;
     let id_date_intr = field_id("dointr", &headers)?;

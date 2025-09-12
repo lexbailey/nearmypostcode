@@ -11,7 +11,7 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v2
             - run: npm i terser -g
-            - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/3be72478d8454b59bb86ba97b4ee325b/data
+            - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/295e076b89b542e497e05632706ab429/data
             - run: mkdir ghpageroot
             - run: cp index.html ghpageroot/index.html
             - run: cp aa_box_demo.html ghpageroot/aa_box_demo.html
