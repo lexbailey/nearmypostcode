@@ -4,6 +4,7 @@ if [ $# -ne 1 ]; then
     echo "Error: expected one argument: URL of data file"
     exit 1
 fi
+rm -rf fetched_data
 mkdir -p fetched_data
 pushd fetched_data
 wget -O ONSData.zip $1

@@ -10,7 +10,7 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v2
             - run: npm i terser -g
-            - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/295e076b89b542e497e05632706ab429/data
+            - run: ./build_release https://www.arcgis.com/sharing/rest/content/items/3635ca7f69df4733af27caf86473ffa1/data
             - uses: "marvinpinto/action-automatic-releases@latest"
               with:
                 repo_token: "${{ secrets.GITHUB_TOKEN }}"
