@@ -8,7 +8,7 @@ Explainer video: https://youtu.be/5HRAUWrvK6o
 
 NearMyPostcode (NMP) lets you provide a "store locator" feature (or similar) on your website that respects your user's privacy.
 
-NMP works entirely offline. Once the data file (approx 5.5MB) is downloaded to the user's browser, they can completely disconnect from the internet and sill be able to look up their postcode and find things near their postcode.
+NMP works entirely offline. Once the data file (approx 5.5MB) is downloaded to the user's browser, they can completely disconnect from the internet and still be able to look up their postcode and find things near their postcode.
 
 When using NMP, you are encouraged to serve the javascript file from your own web server, and also serve the postcode data file from your own server. This minimises the number of requests the user agent needs to make to other services, and thus benefits the user's privacy further.
 
@@ -19,6 +19,13 @@ Although it is possible, you are discouraged from using this library to host you
 This program is designed for use with the ONS Postcode database. You can see licence information for this database here: https://www.ons.gov.uk/methodology/geography/licences
 
 Note that postcodes in Northern Ireland are licenced differently. If you need to exclude these from your file, use the option `--exclude BT` when running the packer.
+
+```bash
+# For example, if running with cargo:
+cargo run -- --exclude BT path/to/ONSPD_month_year_UK.csv postcodes.pack
+# or from a prebuilt binary:
+nearmypostcode_packer --exclude BT path/to/ONSPD_month_year_UK.csv postcodes.pack
+```
 
 # Getting started
 
