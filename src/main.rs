@@ -35,6 +35,7 @@ struct Point{
 struct PostcodeInfo{
     postcode: String,
     location: Point,
+    is_partial: bool,
 }
 
 impl Display for PostcodeError{
@@ -214,6 +215,7 @@ fn read_postcodes(path: &str, exclude: &Vec<&str>) -> Result<(Vec<PostcodeInfo>,
         pclist.push(PostcodeInfo{
             postcode,
             location,
+            is_partial: false,
         });
     }
     let skipped = total - pclist.len();
@@ -371,6 +373,37 @@ fn human(n: u64) -> String{
     format!("{:.3} {}",n, names[ni])
 }
 
+fn insert_outward_averages(postcodes: &mut Vec<PostcodeInfo>){
+    struct LLTotal{
+        lat: f64,
+        long: f64,
+        n: u32,
+    }
+
+    impl LLTotal{
+        fn add(&mut self, p: &Point){
+            self.n += 1;
+            self.lat += p.y;
+            self.long += p.x;
+        }
+
+        fn average(&self) -> Point{
+            if (self.n == 0) {
+                return Point{x:0.0,y:0.0};
+            }
+            let n = self.n as f64;
+            Point{x:self.long/n, y:self.lat/n}
+        }
+    }
+
+    let mut totals: HashMap<String, LLTotal> = HashMap::new();
+
+    for p in postcodes{
+        let outward = p.postcode[0..4];
+        totals.insert_
+    }
+}
+
 fn do_postcode_repack(infilename: &str, outfilename: &str, exclude: &Vec<&str>) -> Result<(),PostcodeError>{
     println!("Reading postcodes...");
     let (mut postcodes, minll, maxll, skipped, terminated, excluded, last_update) = read_postcodes(infilename, exclude)?;
@@ -380,6 +413,7 @@ fn do_postcode_repack(infilename: &str, outfilename: &str, exclude: &Vec<&str>) 
     println!("      {} of the skips were for excluded prefixes.", excluded);
     println!("  Will process {} postcodes in the bounding box from {},{} to {},{}", postcodes.len(), minll.x,minll.y, maxll.x,maxll.y);
     println!("Sorting postcode lists...");
+    insert_outward_averages(&mut postcodes);
     postcodes.sort_by(|a,b|a.postcode.cmp(&b.postcode));
     println!("Packing postcodes...");
     let packed_codes = pack_postcodes(&postcodes, minll, maxll)?;
@@ -415,7 +449,15 @@ fn do_postcode_repack(infilename: &str, outfilename: &str, exclude: &Vec<&str>) 
             format:   1 bytes (bitfield)
                 postcode_is_delta: 1 bit (flag indicating if postcode is delta-encoded)
                 latlong_is_delta:  1 bit (flag indicating if lat/long is delta-encoded)
-                postcode_delta:    6 bits (u6 number to add to previous postcode to calculate this postcode, or unused if not postcode_is_delta)
+                extra_data: 6 bits
+                    postcode_is_delta == 1 => postcode_delta:    6 bits (u6 number to add to previous postcode to calculate this postcode)
+                    postcode_is_delta == 0 => special mode: 1 bit
+                        0 => 
+                            00000 => No Special mode
+                            (all other values) => reserved
+                        1 => Special mode
+                            00000 => Postcode only contains outward code, match on first 4 chars only
+                            (all other values) => reserved
             postcode: 0 or 3 bytes (custom encoding, present only if not postcode_is_delta)
             longlat:  2 or 4 bytes (2 x i8 if latlong_is_delta, or 2 x u16 otherwise)
 
