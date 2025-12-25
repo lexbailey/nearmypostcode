@@ -1,11 +1,16 @@
-async function NearMyPostcode(datafile_url){
+async function NearMyPostcode(datafile_url, quiet=false){
     let deltapack;
     try{
-        const response = await fetch(datafile_url);
-        if (!response.ok){
-            throw new Error(`Failed to fetch postcode data file (${datafile_url}): ${response.status}`);
+        if (typeof(datafile_url) == "string"){
+            const response = await fetch(datafile_url);
+            if (!response.ok){
+                throw new Error(`Failed to fetch postcode data file (${datafile_url}): ${response.status}`);
+            }
+            deltapack = await response.arrayBuffer();
         }
-        deltapack = await response.arrayBuffer();
+        else{
+            deltapack = datafile_url;
+        }
     }
     catch (err) {
         throw new Error(`Failed to fetch postcode data file (${datafile_url}): ${err.message}`);
@@ -24,7 +29,7 @@ async function NearMyPostcode(datafile_url){
         throw new Error("Postcode data file is not using a known format");
     }
     const version = new Uint32Array(deltapack.slice(4,8))[0];
-    const max_version = 1; // This version of the library only supports version 1
+    const max_version = 2; // This version of the library only supports version 1
     if (version > max_version){
         throw new Error(`Postcode data file uses format version ${version}. This NMP version only supports data formats up to ${max_version}. NMP needs to be updated.`);
     }
@@ -33,7 +38,9 @@ async function NearMyPostcode(datafile_url){
     const unixtime = BigInt(timestamp[0]) + (BigInt(timestamp[1]) * (2n**32n));
     const date = new Date(Number(unixtime*1000n));
 
-    console.info(`nearmypostcode: Loaded postcode pack. Max supported file format version is ${max_version}. File format version is ${version}. Last updated ${date.toDateString()}`);
+    if (!quiet){
+        console.info(`nearmypostcode: Loaded postcode pack. Max supported file format version is ${max_version}. File format version is ${version}. Last updated ${date.toDateString()}`);
+    }
 
     var nmp = Object();
     nmp.deltapack = deltapack.slice(16); // Discard the header, no longer needed
@@ -42,12 +49,9 @@ async function NearMyPostcode(datafile_url){
 
     nmp.E_FORMAT = "Postcode format not recognised";
     nmp.E_NOTFOUND = "Postcode not found";
+    nmp.E_DATA_VERSION = "Data file format does not support this type of postcode";
 
     nmp.pack_code = ((postcode) => {
-        if (postcode.length != 7){
-            throw new Error(nmp.E_FORMAT);
-        }
-
         function ord(x){
             return x.charCodeAt(0);
         }
@@ -88,17 +92,32 @@ async function NearMyPostcode(datafile_url){
             return encode_AZ09(x);
         }
 
-        const [a,b,c,d,e,f,g] = postcode;
+        if (postcode.length == 4) {
+            const [a,b,c,d] = postcode;
 
-        // Encode the rest
-        let c2 = 26*26*10*37*encode_AZ09_space(c);
-        let d2 = 26*26*10*encode_AZ09_space(d);
+            // Encode the rest
+            let c2 = 37*encode_AZ09_space(c);
+            let d2 = encode_AZ09_space(d);
 
-        let e2 = 26*26*encode_09(e);
-        let f2 = 26*encode_AZ(f);
-        let g2 = encode_AZ(g);
-        let encoded = c2 + d2 + e2 + f2 + g2;
-        return encoded;
+            let encoded = c2 + d2;
+            return encoded;
+        }
+
+        if (postcode.length == 7){
+            const [a,b,c,d,e,f,g] = postcode;
+
+            // Encode the rest
+            let c2 = 26*26*10*37*encode_AZ09_space(c);
+            let d2 = 26*26*10*encode_AZ09_space(d);
+
+            let e2 = 26*26*encode_09(e);
+            let f2 = 26*encode_AZ(f);
+            let g2 = encode_AZ(g);
+            let encoded = c2 + d2 + e2 + f2 + g2;
+            return encoded;
+        }
+
+        throw new Error(nmp.E_FORMAT);
     });
 
     nmp.format_postcode = ((pc) => {
@@ -112,7 +131,7 @@ async function NearMyPostcode(datafile_url){
         // in to the string to make up the length.
         const VALID_CHARS = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         let chars = Array.from(pc);
-        for (c of chars){
+        for (const c of chars){
             if (!VALID_CHARS.includes(c)){
                 throw new Error(nmp.E_FORMAT);
             }
@@ -120,20 +139,28 @@ async function NearMyPostcode(datafile_url){
     
         let code = chars.filter((c)=>c!=" ").map((c)=>c.toUpperCase()).join("");
     
-        // We should now have somewhere between 7 and 5 characters
+        // We should now have somewhere between 2 and 7 characters
         let numchars = code.length;
-        if (numchars > 7 || numchars < 5){
+        if (numchars > 7 || numchars < 2){
             throw new Error(nmp.E_FORMAT);
         }
-        // Now we extract the inward and outward codes
-        let inward = code.slice(numchars-3,numchars);
-        let outward = code.slice(0,numchars-3);
-        // Generate enough padding
-        let n_padding = 4 - outward.length;
-        let padding = "  ".slice(0,n_padding);
-        // Build the resulting postcode
-        let canonical = outward + padding + inward;
-        return canonical;
+        if (numchars <= 4) {
+            // is only the outward code, just pad with spaces
+            let n_padding = 4 - numchars;
+            let padding = "  ".slice(0,n_padding);
+            return code + padding;
+        }
+        else{
+            // Now we extract the inward and outward codes
+            let inward = code.slice(numchars-3,numchars);
+            let outward = code.slice(0,numchars-3);
+            // Generate enough padding
+            let n_padding = 4 - outward.length;
+            let padding = "  ".slice(0,n_padding);
+            // Build the resulting postcode
+            let canonical = outward + padding + inward;
+            return canonical;
+        }
     })
 
     nmp.lookup_postcode = ((postcode)=>{
@@ -162,7 +189,16 @@ async function NearMyPostcode(datafile_url){
         //         format:   1 bytes (bitfield)
         //             postcode_is_delta: 1 bit (flag indicating if postcode is delta-encoded)
         //             latlong_is_delta:  1 bit (flag indicating if lat/long is delta-encoded)
-        //             postcode_delta:    6 bits (u6 number to add to previous postcode to calculate this postcode, or unused if not postcode_is_delta)
+        //             extra_data: 6 bits
+        //                 postcode_is_delta == 1 => postcode_delta:    6 bits (u6 number to add to previous postcode to calculate this postcode)
+        //                 postcode_is_delta == 0 =>
+        //                     special mode: 1 bit
+        //                     0 => 
+        //                         00000 => No Special mode
+        //                         (all other values) => reserved
+        //                     1 => Special mode
+        //                         00000 => Postcode only contains outward code, match on first 4 chars only
+        //                         (all other values) => reserved
         //         postcode: 0 or 3 bytes (custom encoding, present only if not postcode_is_delta)
         //         longlat:  2 or 4 bytes (2 x i8 if latlong_is_delta, or 2 x u16 otherwise)
 
@@ -170,6 +206,10 @@ async function NearMyPostcode(datafile_url){
 
         // Calculate the encoded value of this postcode
         let cpostcode = nmp.format_postcode(postcode);
+        let lookup_outward_only = cpostcode.length == 4;
+        if (lookup_outward_only && (version < 2)){
+            throw new Error(nmp.E_DATA_VERSION);
+        }
         let c_code = nmp.pack_code(cpostcode);
         let c = [
             c_code & 0xff,
@@ -198,7 +238,9 @@ async function NearMyPostcode(datafile_url){
         var last_code = 0;
         var last_lat = 0;
         var last_long = 0;
+        var is_outward_only = false;
         while (pos < endpos + datastart){
+            is_outward_only = false;
             // Get the format of this postcode entry (each field delta encoded or not)
             const format = new Uint8Array(pack.slice(pos,pos+1))[0];
             pos += 1;
@@ -214,30 +256,41 @@ async function NearMyPostcode(datafile_url){
             }
             else{
                 // Absolute postcode is three bytes long
-                const [nc_a, nc_b, nc_c] = new Uint8Array(pack.slice(pos,pos+3));
-                pos += 3;
-                this_code = (nc_c << 16) + (nc_b << 8) + nc_a;
+                const special = format & 0x3f;
+                if (special == 0x20) {
+                    is_outward_only = true;
+                    const [nc_a, nc_b, nc_c] = new Uint8Array(pack.slice(pos,pos+3));
+                    pos += 3;
+                    this_code = (nc_c << 16) + (nc_b << 8) + nc_a;
+                }
+                else{
+                    const [nc_a, nc_b, nc_c] = new Uint8Array(pack.slice(pos,pos+3));
+                    pos += 3;
+                    this_code = (nc_c << 16) + (nc_b << 8) + nc_a;
+                }
             }
             let long;
             let lat;
             if (ll_is_delta){
                 // lat/long is delta encoded as a pair of signed 8 bit numbers
-                const [dlat, dlong] = new Int8Array(pack.slice(pos,pos+2))
+                const [dlat, dlong] = new Int8Array(pack.slice(pos,pos+2));
                 pos += 2;
                 long = last_long + dlong;
                 lat = last_lat + dlat;
             }
             else{
                 // Absolute lat/long is a pair of 16 bit unsigned numbers
-                [lat, long] = new Uint16Array(pack.slice(pos,pos+4))
+                [lat, long] = new Uint16Array(pack.slice(pos,pos+4));
                 pos += 4;
             }
             // Now ready to check if this code is a match
-            if (this_code == c_code){
-                // Calculate the real coordinates (the stored value is the fraction of the width or height of the bounding box)
-                const lat2  = minlat +  ((maxlat -minlat )*(lat/65535.0));
-                const long2 = minlong + ((maxlong-minlong)*(long/65535.0));
-                return [cpostcode,[long2,lat2]];
+            if (is_outward_only == lookup_outward_only){
+                if (this_code == c_code){
+                    // Calculate the real coordinates (the stored value is the fraction of the width or height of the bounding box)
+                    const lat2  = minlat +  ((maxlat -minlat )*(lat/65535.0));
+                    const long2 = minlong + ((maxlong-minlong)*(long/65535.0));
+                    return [cpostcode,[long2,lat2]];
+                }
             }
             last_code = this_code;
             last_lat = lat;

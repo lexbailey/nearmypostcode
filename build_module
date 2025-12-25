@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+cat nearmypostcode.js module_footer.mjs > nearmypostcode.mjs

@@ -73,10 +73,10 @@ For an example of using NMP to sort landmarks by distance, see `aa_box_demo.html
 ## Initialisation
 
 ```js
-NearMyPostcode(url)
+NearMyPostcode(url, quiet=false)
 ```
 
-The function `NearMyPostcode` takes the URL for the postcodes.pack file, and returns a promise that resolves to an instance of NearMyPostcode
+The function `NearMyPostcode` takes the URL for the postcodes.pack file, and returns a promise that resolves to an instance of NearMyPostcode. Optionally also takes a boolean value "quiet". When quiet is true, NMP will not print version and file info to the console when it it initialised.
 
 ## NearMyPostcode object
 

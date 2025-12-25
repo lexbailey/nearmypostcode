@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+
+import { NearMyPostcode } from './nearmypostcode.mjs';
+import fs from 'node:fs';
+const data = await fs.openAsBlob('postcodes.pack');
+const databuf = await data.arrayBuffer();
+const nmp = await NearMyPostcode(databuf, true);
+
+process.argv.slice(2).forEach(arg=>{
+    try {
+        const [cpc, [lon,lat]] = nmp.lookup_postcode(arg);
+        console.log(`Postcode: ${cpc}, location: ${lon},${lat}`);
+    }
+    catch (e) {
+        console.error(`Error looking up postcode ${arg}. ${e.message}`);
+    }
+});

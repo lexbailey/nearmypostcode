@@ -58,39 +58,64 @@ impl From<ParseFloatError> for PostcodeError{
     fn from(_: ParseFloatError) -> Self { PostcodeError::InputMalformed() }
 }
 
-pub fn pack_code(code: &str) -> Result<[u8;3], PostcodeError>{
+fn encode_AZ(x:u8) -> Result<u32, PostcodeError> {
+    if x >= b'A' && x <= b'Z'{
+        Ok((x-b'A') as u32)
+    }
+    else {
+        Err(PostcodeError::InvalidFormat())
+    }
+}
+
+fn encode_09(x:u8) -> Result<u32, PostcodeError> {
+    if x >= b'0' && x <= b'9'{
+        Ok((x-b'0') as u32)
+    }
+    else {
+        Err(PostcodeError::InvalidFormat())
+    }
+}
+
+fn encode_AZ09(x:u8) -> Result<u32, PostcodeError> {
+    encode_AZ(x).or_else(|_|Ok(encode_09(x)?+26))
+}
+
+fn encode_AZ09_space(x:u8) -> Result<u32, PostcodeError> {
+    if x == b' '{ Ok(36) } else{ encode_AZ(x).or_else(|_|Ok(encode_09(x)?+26)) }
+}
+
+
+pub fn pack_outward_code(code: &str) -> Result<[u8;3], PostcodeError>{
     if code.len() < 7{
         return Err(PostcodeError::InvalidFormat());
     }
 
     let mut chars = code.as_bytes().iter();
 
-    fn encode_AZ(x:u8) -> Result<u32, PostcodeError> {
-        if x >= b'A' && x <= b'Z'{
-            Ok((x-b'A') as u32)
-        }
-        else {
-            Err(PostcodeError::InvalidFormat())
-        }
+    // Skip the first two chars
+    let _a = encode_AZ(*chars.next().unwrap())?;
+    let _b = encode_AZ09(*chars.next().unwrap())?;
+
+    // Encode the rest
+    let c = 37*encode_AZ09_space(*chars.next().unwrap())?;
+    let d = encode_AZ09_space(*chars.next().unwrap())?;
+    let encoded = c + d;
+    assert!(encoded < 2_u32.pow(16));
+    let encoded = encoded.to_le_bytes();
+    Ok([
+        encoded[0],
+        encoded[1],
+        encoded[2],
+    ])
+}
+
+pub fn pack_code(code: &str) -> Result<[u8;3], PostcodeError>{
+    if code.len() < 7{
+        return Err(PostcodeError::InvalidFormat());
     }
 
-    fn encode_09(x:u8) -> Result<u32, PostcodeError> {
-        if x >= b'0' && x <= b'9'{
-            Ok((x-b'0') as u32)
-        }
-        else {
-            Err(PostcodeError::InvalidFormat())
-        }
-    }
-
-    fn encode_AZ09(x:u8) -> Result<u32, PostcodeError> {
-        encode_AZ(x).or_else(|_|Ok(encode_09(x)?+26))
-    }
-
-    fn encode_AZ09_space(x:u8) -> Result<u32, PostcodeError> {
-        if x == b' '{ Ok(36) } else{ encode_AZ(x).or_else(|_|Ok(encode_09(x)?+26)) }
-    }
-
+    let mut chars = code.as_bytes().iter();
+    
     // Skip the first two chars
     let _a = encode_AZ(*chars.next().unwrap())?;
     let _b = encode_AZ09(*chars.next().unwrap())?;
@@ -287,9 +312,14 @@ fn pack_postcodes(postcodes: &Vec<PostcodeInfo>, minll: Point, maxll:Point) -> R
             last_long = 0;
             last_prefix = this_prefix.to_string();
         }
-        let c = pack_code(&p.postcode)?;
+        let partial = p.is_partial;
+        let c = if partial {
+            pack_outward_code(&p.postcode)?;
+        } else{
+            pack_code(&p.postcode)?;
+        }
         let code_number = u32::from_le_bytes([c[0],c[1],c[2],0]);
-        let can_delta_encode_pc = {
+        let can_delta_encode_pc = (!p.is_partial) && {
             if last_code > code_number{
                 // List is probably not sorted, inefficient
                 false
@@ -301,7 +331,7 @@ fn pack_postcodes(postcodes: &Vec<PostcodeInfo>, minll: Point, maxll:Point) -> R
         let (long,lat) = calc_ll(minll, maxll, p.location);
         let dlong = (long as i32) - last_long;
         let dlat = (lat as i32) - last_lat;
-        let can_delta_encode_ll: bool = {
+        let can_delta_encode_ll: bool = (!p.is_partial) && {
             let can_long = dlong >= -128 && dlong <= 127;
             let can_lat = dlat >= -128 && dlat <= 127;
             can_long && can_lat
@@ -313,7 +343,7 @@ fn pack_postcodes(postcodes: &Vec<PostcodeInfo>, minll: Point, maxll:Point) -> R
         match (can_delta_encode_pc, can_delta_encode_ll){
             (false,false) => {
                 let mut packed: [u8;8] = [0;8];
-                packed[0] = 0x00;
+                packed[0] = if partial {0x20} else {0x00};
                 packed[1] = c[0];
                 packed[2] = c[1];
                 packed[3] = c[2];
@@ -381,6 +411,9 @@ fn insert_outward_averages(postcodes: &mut Vec<PostcodeInfo>){
     }
 
     impl LLTotal{
+        fn new() -> Self{
+            Self {lat:0.0, long:0.0, n:0}
+        }
         fn add(&mut self, p: &Point){
             self.n += 1;
             self.lat += p.y;
@@ -388,7 +421,7 @@ fn insert_outward_averages(postcodes: &mut Vec<PostcodeInfo>){
         }
 
         fn average(&self) -> Point{
-            if (self.n == 0) {
+            if self.n == 0 {
                 return Point{x:0.0,y:0.0};
             }
             let n = self.n as f64;
@@ -398,9 +431,21 @@ fn insert_outward_averages(postcodes: &mut Vec<PostcodeInfo>){
 
     let mut totals: HashMap<String, LLTotal> = HashMap::new();
 
-    for p in postcodes{
-        let outward = p.postcode[0..4];
-        totals.insert_
+    for p in postcodes.iter(){
+        let outward = &p.postcode[0..4];
+        if ! totals.contains_key(outward) {
+            totals.insert(outward.to_string(), LLTotal::new());
+        }
+        let t = totals.get_mut(outward).unwrap();
+        t.add(&p.location);
+    }
+    for (k, v) in totals{
+        let p = PostcodeInfo{
+            is_partial: true,
+            postcode: format!("{}   ", k),
+            location: v.average(),
+        };
+        postcodes.push(p);
     }
 }
 
@@ -466,8 +511,8 @@ fn do_postcode_repack(infilename: &str, outfilename: &str, exclude: &Vec<&str>) 
     // Header...
     outfile.write(b"UKPP")?; // magic number is 1347439445
 
-    // version 1 of file format
-    const version: u32 = 1;
+    // version 2 introduces outward-only postcodes
+    const version: u32 = 2;
     outfile.write(&version.to_le_bytes())?;
 
     // data update date
