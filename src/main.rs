@@ -314,10 +314,10 @@ fn pack_postcodes(postcodes: &Vec<PostcodeInfo>, minll: Point, maxll:Point) -> R
         }
         let partial = p.is_partial;
         let c = if partial {
-            pack_outward_code(&p.postcode)?;
-        } else{
-            pack_code(&p.postcode)?;
-        }
+            pack_outward_code(&p.postcode)?
+        } else {
+            pack_code(&p.postcode)?
+        };
         let code_number = u32::from_le_bytes([c[0],c[1],c[2],0]);
         let can_delta_encode_pc = (!p.is_partial) && {
             if last_code > code_number{

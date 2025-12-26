@@ -16,5 +16,5 @@ popd
 cargo run -- fetched_data/Data/$datafile postcodes.pack
 terser nearmypostcode.js -o nearmypostcode.min.js --source-map
 ./build_module
-./test.js
+node --experimental-test-coverage ./test.js
 zip nearmypostcode.zip postcodes.pack nearmypostcode.js nearmypostcode.min.js nearmypostcode.min.js.map nearmypostcode.mjs
