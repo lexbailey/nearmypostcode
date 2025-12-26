@@ -300,7 +300,7 @@ async function NearMyPostcode(datafile_url, quiet=false){
     });
 
     nmp.distance_between = ((point_a,point_b)=>{
-        toRad = (x)=> x * Math.PI / 180;
+        const toRad = (x)=> x * Math.PI / 180;
 
         const [lon1,lat1] = point_a;
         const [lon2,lat2] = point_b;
@@ -318,6 +318,9 @@ async function NearMyPostcode(datafile_url, quiet=false){
     });
 
     nmp.sort_by_distance = ((items, point, coordfunc)=>{
+        if ((!Array.isArray(point)) || (point.length != 2)){
+            throw new Error('point should be a pair of numbers: [lon, lat]');
+        }
         var by_distance = items.map((i)=>{return{item:i,distance:nmp.distance_between(point, coordfunc(i))}});
         by_distance.sort((a,b)=>a.distance-b.distance);
         return by_distance;
