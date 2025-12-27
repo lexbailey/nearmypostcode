@@ -108,7 +108,10 @@ Args:
 - `postcode` a string containing a UK postcode, or Outward code only.
 
 For full postcodes: Formats a postcode in to the canonical 7 character string format. The input postcode can use any case for letters, and may have spaces at any point. The resulting postcode will be all upper case. The Inward code (last three chars) will be aligned to the right of the string. The Outward code (everything except the Inward code) will be aligned to the left of the string. Padding spaces will be added between the Outward and Inward codes if required to make the postcode exactly 7 characters long.
+
 For outward-only codes (first half of postcode): Formats an outward code as if it was a full postcode, but without the last three characters. Output is always 4 characters long, space padded where required.
+
+Note: Outward-only codes supported since version 1.1.0
 
 ### Function: nmp.lookup_postcode()
 
@@ -124,6 +127,8 @@ Args:
  - `postcode`: a UK postcode (or outward code only) as a string
 
 This function takes a postcode or just the outward code part of a postcode (that may or may not be in canonical format) and searches for it in the postcode data file provided when this NearMyPostcode object was created. It returns the canonical form of the postcode, and the latitude and longitude, or throws an error.
+
+Note: Outward-only codes supported since version 1.1.0
 
 ### Function: nmp.sort_by_distance()
 
