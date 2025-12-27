@@ -21,7 +21,7 @@ async function NearMyPostcode(datafile_url, quiet=false){
     //
     //     magic:   4 bytes "UKPP" - magic number for "UK Postcode Pack"
     //     version: 4 bytes (u32)  - version number of the file format (this code generates version 1)
-    //     date:    8 bytes (u64)  - a unix epoch that represents the release date of the ONS dataset that the file was generated from
+    //     date:    8 bytes (u64)  - seconds since unix epoch when the most recently updated postcode was updated
 
        
     const magic = new Uint32Array(deltapack.slice(0,4))[0];
@@ -62,6 +62,7 @@ async function NearMyPostcode(datafile_url, quiet=false){
                 return code - ord('A')
             }
             else {
+                // Should be unreachable
                 throw new Error(nmp.E_FORMAT);
             }
         }
@@ -70,8 +71,10 @@ async function NearMyPostcode(datafile_url, quiet=false){
             let code = ord(x);
             if (code >= ord('0') && code <= ord('9')) {
                 return code - ord('0');
+            /* node:coverage ignore next 5 */
             }
             else {
+                // should be unreachable
                 throw new Error(nmp.E_FORMAT);
             }
         }
@@ -115,8 +118,9 @@ async function NearMyPostcode(datafile_url, quiet=false){
             let g2 = encode_AZ(g);
             let encoded = c2 + d2 + e2 + f2 + g2;
             return encoded;
+            /* node:coverage ignore next 3 */
         }
-
+        // Should be unreachable
         throw new Error(nmp.E_FORMAT);
     });
 
