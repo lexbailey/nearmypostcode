@@ -2,6 +2,8 @@
 
 A privacy-focussed Javascript library for converting UK postcodes to lat/long GPS coordinates and sorting locations by distance.
 
+Explainer Blog post: http://computingthedetails.org/blog/a-privacy-preserving-postcode-lookup-tool/
+
 Explainer video: https://youtu.be/5HRAUWrvK6o
 
 # Principles
